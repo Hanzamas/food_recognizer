@@ -57,7 +57,8 @@ class ClassifierService {
       ),
     );
 
-    final output = List.generate(1, (_) => List<double>.filled(_numClasses, 0.0));
+    final outputSize = _interpreter!.getOutputTensor(0).shape[1];
+    final output = List.generate(1, (_) => List<double>.filled(outputSize, 0.0));
 
     await _isolateInterpreter!.run(input, output);
 
