@@ -7,16 +7,11 @@ class ClassifierService {
   static Interpreter? _interpreter;
   static IsolateInterpreter? _isolateInterpreter;
   static List<String> _labels = [];
-  static int _numClasses = 2023;
 
   static bool get isInitialized => _isolateInterpreter != null;
 
   static Future<void> init() async {
     _interpreter = await Interpreter.fromAsset('assets/1.tflite');
-
-    // Cache output size from model
-    final outputShape = _interpreter!.getOutputTensor(0).shape;
-    _numClasses = outputShape.length > 1 ? outputShape[1] : 2023;
 
     _isolateInterpreter = await IsolateInterpreter.create(
       address: _interpreter!.address,

@@ -31,23 +31,42 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     try {
       _cameras = await availableCameras();
       if (_cameras.isEmpty) return;
-
-      _controller = CameraController(
-        _cameras.first,
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
-      await _controller!.initialize();
-
-      if (!mounted) return;
-      setState(() {});
-
-      // Start inference every 1 second
-      _inferenceTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        _runLiveInference();
-      });
+      await _startController(_cameras.first);
     } catch (e) {
       debugPrint('Camera init error: $e');
+    }
+  }
+
+  Future<void> _startController(CameraDescription camera) async {
+    final controller = CameraController(
+      camera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+    _controller = controller;
+    await controller.initialize();
+
+    if (!mounted) return;
+    setState(() {});
+
+    // Start inference every 1 second
+    _inferenceTimer?.cancel();
+    _inferenceTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _runLiveInference();
+    });
+  }
+
+  // Required by camera docs: handle lifecycle changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    if (state == AppLifecycleState.inactive) {
+      _inferenceTimer?.cancel();
+      controller.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      _startController(controller.description);
     }
   }
 
@@ -59,9 +78,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     try {
       final xFile = await _controller!.takePicture();
       final result = await ClassifierService.classifyFromPath(xFile.path);
-      if (mounted) {
-        setState(() => _liveResult = result);
-      }
+      if (mounted) setState(() => _liveResult = result);
       File(xFile.path).deleteSync();
     } catch (_) {}
     _isProcessing = false;
@@ -103,9 +120,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       ),
       backgroundColor: Colors.black,
       body: _controller == null || !_controller!.value.isInitialized
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            )
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : Stack(
               fit: StackFit.expand,
               children: [
@@ -118,10 +133,9 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
                     left: 16,
                     right: 16,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black54,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(

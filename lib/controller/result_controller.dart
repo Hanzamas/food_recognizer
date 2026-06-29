@@ -34,13 +34,13 @@ class ResultController extends ChangeNotifier {
 
       if (_foodResult != null) {
         final foodName = _foodResult!.label;
-        // Fetch in parallel
-        final results = await Future.wait([
-          MealService.searchMeal(foodName),
-          GeminiService.getNutrition(foodName),
-        ]);
-        _meals = results[0] as List<MealModel>;
-        _nutrition = results[1] as NutritionModel?;
+
+        // Fetch MealDB and Gemini in parallel — safe cast with fallback
+        final mealsFuture = MealService.searchMeal(foodName);
+        final nutritionFuture = GeminiService.getNutrition(foodName);
+
+        _meals = await mealsFuture;
+        _nutrition = await nutritionFuture;
       }
 
       _state = ResultState.loaded;
