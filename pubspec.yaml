@@ -1,0 +1,38 @@
+name: submission
+description: "Food Recognizer App - Dicoding Submission"
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  provider: ^6.1.2
+  image_picker: ^1.1.2
+  image_cropper: ^8.0.2
+  camera: ^0.11.0+1
+  tflite_flutter: ^0.10.4
+  image: ^4.2.0
+  http: ^1.2.2
+  google_generative_ai: ^0.4.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/1.tflite
+    - assets/labels.txt
+    - assets/nasi-lemak.jpg
+    - assets/satay.jpg
+    - assets/sushi.jpg
+    - assets/lasagna.jpg
+    - assets/beef-bourguignon.jpg
