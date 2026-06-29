@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img;
 import 'package:submission/model/food_result.dart';
 import 'package:submission/service/classifier_service.dart';
 import 'package:submission/ui/result_page.dart';

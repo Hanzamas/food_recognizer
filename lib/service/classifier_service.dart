@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -8,14 +7,21 @@ class ClassifierService {
   static Interpreter? _interpreter;
   static IsolateInterpreter? _isolateInterpreter;
   static List<String> _labels = [];
+  static int _numClasses = 2023;
 
   static bool get isInitialized => _isolateInterpreter != null;
 
   static Future<void> init() async {
     _interpreter = await Interpreter.fromAsset('assets/1.tflite');
+
+    // Cache output size from model
+    final outputShape = _interpreter!.getOutputTensor(0).shape;
+    _numClasses = outputShape.length > 1 ? outputShape[1] : 2023;
+
     _isolateInterpreter = await IsolateInterpreter.create(
       address: _interpreter!.address,
     );
+
     final labelsRaw = await rootBundle.loadString('assets/labels.txt');
     _labels = labelsRaw
         .split('\n')
@@ -28,15 +34,6 @@ class ClassifierService {
     if (_isolateInterpreter == null) return null;
 
     final imageFile = await img.decodeImageFile(imagePath);
-    if (imageFile == null) return null;
-
-    return _runInference(imageFile);
-  }
-
-  static Future<FoodResult?> classifyFromBytes(Uint8List bytes) async {
-    if (_isolateInterpreter == null) return null;
-
-    final imageFile = img.decodeImage(bytes);
     if (imageFile == null) return null;
 
     return _runInference(imageFile);
@@ -60,7 +57,7 @@ class ClassifierService {
       ),
     );
 
-    final output = List.generate(1, (_) => List<double>.filled(2024, 0.0));
+    final output = List.generate(1, (_) => List<double>.filled(_numClasses, 0.0));
 
     await _isolateInterpreter!.run(input, output);
 
@@ -74,8 +71,7 @@ class ClassifierService {
       }
     }
 
-    final label =
-        maxIdx < _labels.length ? _labels[maxIdx] : 'Unknown ($maxIdx)';
+    final label = maxIdx < _labels.length ? _labels[maxIdx] : 'Unknown ($maxIdx)';
     return FoodResult(label: label, confidence: maxScore);
   }
 
