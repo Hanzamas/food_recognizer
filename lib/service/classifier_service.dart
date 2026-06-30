@@ -37,7 +37,8 @@ class ClassifierService {
   static Future<FoodResult?> _runInference(img.Image imageFile) async {
     final resized = img.copyResize(imageFile, width: 224, height: 224);
 
-    // Build [1, 224, 224, 3] float input
+    // Model is uint8 quantized — send raw int pixel values [0, 255]
+    // NOT float [0.0, 1.0]
     final input = List.generate(
       1,
       (_) => List.generate(
@@ -46,20 +47,21 @@ class ClassifierService {
           224,
           (x) {
             final px = resized.getPixel(x, y);
-            return [px.r / 255.0, px.g / 255.0, px.b / 255.0];
+            return [px.r.toInt(), px.g.toInt(), px.b.toInt()];
           },
         ),
       ),
     );
 
+    // Output is also uint8: values 0-255 (255 = 100% confidence)
     final outputSize = _interpreter!.getOutputTensor(0).shape[1];
-    final output = List.generate(1, (_) => List<double>.filled(outputSize, 0.0));
+    final output = List.generate(1, (_) => List<int>.filled(outputSize, 0));
 
     await _isolateInterpreter!.run(input, output);
 
     final scores = output[0];
     int maxIdx = 0;
-    double maxScore = 0;
+    int maxScore = 0;
     for (int i = 0; i < scores.length; i++) {
       if (scores[i] > maxScore) {
         maxScore = scores[i];
@@ -68,7 +70,8 @@ class ClassifierService {
     }
 
     final label = maxIdx < _labels.length ? _labels[maxIdx] : 'Unknown ($maxIdx)';
-    return FoodResult(label: label, confidence: maxScore);
+    // Convert uint8 confidence (0-255) to percentage (0.0-1.0)
+    return FoodResult(label: label, confidence: maxScore / 255.0);
   }
 
   static void dispose() {
